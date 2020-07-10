@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package quizservice;
+
+option go_package = "quizapipb";
+
+service QuizService {
+    rpc ListQuizes(ListQuizesRequest) returns (ListQuizesResponse){}
+    rpc GetQuiz(GetQuizRequest) returns (GetQuizResponse){}
+    rpc SubmitQuiz(SubmitQuizRequest) returns (SubmitQuizResponse){}
+    rpc AdminCreateQuiz(AdminCreateQuizRequest) returns (AdminCreateQuizResponse){}
+    rpc AdminAddQuestionToQuiz(AdminAddQuestionToQuizRequest) returns (AdminAddQuestionToQuizResponse){}
+
+
+}
+
+message SubmitQuizRequest {
+    uint32 id = 1;
+    repeated Answer responses = 2;
+    message Answer {
+        uint32 question_id = 1;
+        string response = 2;
+    }
+}
+
+message SubmitQuizResponse {
+
+}
+
+message AdminCreateQuizRequest {
+    string name = 1;
+}
+
+message AdminCreateQuizResponse {
+    uint32 id = 1;
+}
+
+message AdminAddQuestionToQuizRequest {
+    uint32 quiz_id = 1;
+    string text = 2;
+}
+
+message AdminAddQuestionToQuizResponse {
+    Question result = 1;
+}
+
+message ListQuizesRequest {
+
+}
+
+message ListQuizesResponse {
+    repeated Entry quizes = 1;
+    message Entry {
+        uint32 id = 1;
+        string name = 2;
+    }
+}
+
+message GetQuizRequest {
+    uint64 id = 1;
+}
+
+message GetQuizResponse {
+    repeated Question questions = 1;
+
+}
+message Question {
+     uint64 id = 1;
+     string text = 2;
+}
