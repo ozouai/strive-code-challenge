@@ -161,6 +161,9 @@ function QuizTaker(props: { match: { params: { id: string } } }) {
   }
   if (!thankYou) {
     return (
+        <>
+        <Card style={{textAlign: "center"}}>
+        <h1>Test Complete!</h1>
       <Button
         onClick={() => {
           s.submitQuiz({
@@ -179,6 +182,9 @@ function QuizTaker(props: { match: { params: { id: string } } }) {
       >
         Submit Answers
       </Button>
+        </Card>
+      </>
+
     );
   }
   return <div>Thank You!</div>;
