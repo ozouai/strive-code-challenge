@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from "react";
-import logo from "./logo.svg";
-import { Button, List, Form, Input, Card } from "antd";
+import { Button, List, Form, Input, Card, Steps, Layout } from "antd";
 import "./App.css";
 import * as protos from "./protos";
 import axios from "axios";
 import Link from "found/Link";
-import Redirect from "found/Redirect";
 import Route from "found/Route";
 import createBrowserRouter from "found/createBrowserRouter";
 import makeRouteConfig from "found/makeRouteConfig";
@@ -38,8 +36,7 @@ function QuizList() {
     });
   }, []);
   return (
-    <div>
-      QuizList
+    <Card title={"Take a Quiz!"}>
       <List
         dataSource={quizList?.quizes || []}
         renderItem={(item: protos.quizservice.ListQuizesResponse.IEntry) => (
@@ -54,13 +51,17 @@ function QuizList() {
             <List.Item.Meta title={item.name} />
           </List.Item>
         )}
-      ></List>
-    </div>
+      />
+    </Card>
   );
 }
 
 function App(props: { children: any | any[] }) {
-  return <div className="App">{props.children}</div>;
+  return <Layout className={"layout"}>
+      <Layout.Header><div className="logo">Quiz</div></Layout.Header>
+      <Layout.Content>{props.children}</Layout.Content>
+
+  </Layout>;
 }
 
 function QuizTaker(props: { match: { params: { id: string } } }) {
@@ -81,12 +82,21 @@ function QuizTaker(props: { match: { params: { id: string } } }) {
   const [thankYou, setThankYou] = useState(false);
   if (!needToSubmit) {
     return (
+        <>
+        <Card title={"Quiz Progress"}>
+        <Steps current={currentQuestion}>
+            {data?.questions.map((q)=>(
+                <Steps.Step title={q.text} />
+            ))}
+            <Steps.Step title="Submission" />
+        </Steps>
+        </Card>
       <Card title={data?.questions[currentQuestion].text}>
         <Form
           key={`form-${currentQuestion}`}
           onFinish={(values) => {
             questionAnswers[currentQuestion] = values.value;
-            if (currentQuestion == (data?.questions?.length || 0) - 1) {
+            if (currentQuestion === (data?.questions?.length || 0) - 1) {
               setNeedToSubmit(true);
             } else {
               setCurrentQuestion(currentQuestion + 1);
@@ -103,6 +113,7 @@ function QuizTaker(props: { match: { params: { id: string } } }) {
           </Form.Item>
         </Form>
       </Card>
+      </>
     );
   }
   if (!thankYou) {
@@ -157,7 +168,7 @@ function QuizCreator() {
             <List.Item.Meta title={item.name} />
           </List.Item>
         )}
-      ></List>
+      />
     </div>
   );
 }
@@ -215,7 +226,7 @@ const BrowserRouter = createBrowserRouter({
     <Route path="/" Component={App}>
       <Route Component={() => <QuizList />} />
       <Route path={"takeQuiz/:id"} Component={QuizTaker} />
-      <Route path={"admin"} Component={QuizCreator}></Route>
+      <Route path={"admin"} Component={QuizCreator} />
       <Route path={"admin/editQuiz/:id"} Component={EditQuiz} />
     </Route>
   ),
