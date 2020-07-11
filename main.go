@@ -76,8 +76,8 @@ func envOrDefault(key string, defaultString string) string {
 }
 
 func main() {
-
-	dsn := &mysql.Config{Addr: envOrDefault("MYSQL_HOST", "127.0.0.1"),
+	port := envOrDefault("PORT", "8000")
+	dsn := &mysql.Config{Net: envOrDefault("MYSQL_NET", "tcp"), Addr: envOrDefault("MYSQL_ADDR", "127.0.0.1"),
 		User:                 envOrDefault("MYSQL_USER", "root"),
 		Passwd:               envOrDefault("MYSQL_PASSWORD", "password"),
 		DBName:               envOrDefault("MYSQL_DB", "quiz"),
@@ -111,7 +111,7 @@ func main() {
 	})
 
 
-	err = http.ListenAndServe("127.0.0.1:8000", serveMux)
+	err = http.ListenAndServe(":"+port, serveMux)
 	if err != nil {
 		panic(err)
 	}
