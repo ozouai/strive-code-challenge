@@ -1,14 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"github.com/ozouai/strive-code-challenge/models"
 	"github.com/ozouai/strive-code-challenge/quizapipb"
+	"github.com/ozouai/strive-code-challenge/web"
 	"net/http"
 	"os"
+	"time"
 )
 
 type App struct {
@@ -99,7 +102,19 @@ func main() {
 	db.Model(&models.QuizQuestionEntry{}).AddForeignKey("quiz_entry_id", "quiz_entries(id)", "NO ACTION", "NO ACTION")
 	app := &App{DB: db}
 	server := quizapipb.NewQuizServiceServer(app, nil)
-	err = http.ListenAndServe("127.0.0.1:8000", server)
+	serveMux := http.NewServeMux()
+	fileServer := http.FileServer(web.AssetFS())
+	serveMux.Handle("/twirp/", server)
+	serveMux.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
+		if request.URL.Path == "/" {
+			http.ServeContent(writer, request, "index.html", time.Now(), bytes.NewReader(web.MustAsset("build/index.html")))
+			return
+		}
+		fileServer.ServeHTTP(writer, request)
+	})
+
+
+	err = http.ListenAndServe("127.0.0.1:8000", serveMux)
 	if err != nil {
 		panic(err)
 	}
