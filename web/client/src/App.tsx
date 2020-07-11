@@ -93,8 +93,27 @@ function QuizTaker(props: { match: { params: { id: string } } }) {
       .utc(moment(addMinutes(new Date(), 3)).diff(moment(new Date())))
       .format("HH:mm:ss")
   );
+    const nextQuestion = (answer: string) => {
+        questionAnswers[currentQuestion] = answer;
+        setTimeLeft(
+            moment
+                .utc(
+                    moment(addMinutes(new Date(), 3)).diff(moment(new Date()))
+                )
+                .format("HH:mm:ss")
+        );
+        setQuestionDeadline(addMinutes(new Date(), 3));
+        if (currentQuestion === (data?.questions?.length || 0) - 1) {
+            setNeedToSubmit(true);
+        } else {
+            setCurrentQuestion(currentQuestion + 1);
+        }
+    };
   useEffect(() => {
     const timer = setInterval(() => {
+        if(moment(questionDeadline).diff(moment(new Date())) < 0) {
+            nextQuestion("DNF");
+        }
       setTimeLeft(
         moment
           .utc(moment(questionDeadline).diff(moment(new Date())))
@@ -105,6 +124,7 @@ function QuizTaker(props: { match: { params: { id: string } } }) {
       clearTimeout(timer);
     };
   });
+
   if (!needToSubmit) {
     return (
       <>
@@ -123,20 +143,7 @@ function QuizTaker(props: { match: { params: { id: string } } }) {
           <Form
             key={`form-${currentQuestion}`}
             onFinish={(values) => {
-              questionAnswers[currentQuestion] = values.value;
-              setTimeLeft(
-                moment
-                  .utc(
-                    moment(addMinutes(new Date(), 3)).diff(moment(new Date()))
-                  )
-                  .format("HH:mm:ss")
-              );
-              setQuestionDeadline(addMinutes(new Date(), 3));
-              if (currentQuestion === (data?.questions?.length || 0) - 1) {
-                setNeedToSubmit(true);
-              } else {
-                setCurrentQuestion(currentQuestion + 1);
-              }
+                nextQuestion(values.value);
             }}
           >
             <Form.Item name="value">
