@@ -3,7 +3,7 @@ steps:
     args:
       - --destination=gcr.io/omar-zouai/strive-code-challenge:$COMMIT_SHA
       - --cache=true
-- name: 'gcr.io/cloud-builders/gcloud'
+  - name: 'gcr.io/cloud-builders/gcloud'
     args:
       - 'run'
       - 'deploy'
