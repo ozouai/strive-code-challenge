@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from "react";
-import logo from "./logo.svg";
-import { Button, List, Form, Input, Card } from "antd";
+import { Button, List, Form, Input, Card, Steps, Layout } from "antd";
 import "./App.css";
 import * as protos from "./protos";
 import axios from "axios";
 import Link from "found/Link";
-import Redirect from "found/Redirect";
 import Route from "found/Route";
+import { Router, withRouter, Match } from "found";
 import createBrowserRouter from "found/createBrowserRouter";
 import makeRouteConfig from "found/makeRouteConfig";
+import moment from "moment";
 
 const s = protos.quizservice.QuizService.create(
   (method, requestData, callback) => {
@@ -38,8 +38,7 @@ function QuizList() {
     });
   }, []);
   return (
-    <div>
-      QuizList
+    <Card title={"Take a Quiz!"}>
       <List
         dataSource={quizList?.quizes || []}
         renderItem={(item: protos.quizservice.ListQuizesResponse.IEntry) => (
@@ -54,13 +53,20 @@ function QuizList() {
             <List.Item.Meta title={item.name} />
           </List.Item>
         )}
-      ></List>
-    </div>
+      />
+    </Card>
   );
 }
 
 function App(props: { children: any | any[] }) {
-  return <div className="App">{props.children}</div>;
+  return (
+    <Layout className={"layout"}>
+      <Layout.Header>
+        <div className="logo">Quiz</div>
+      </Layout.Header>
+      <Layout.Content>{props.children}</Layout.Content>
+    </Layout>
+  );
 }
 
 function QuizTaker(props: { match: { params: { id: string } } }) {
@@ -79,34 +85,85 @@ function QuizTaker(props: { match: { params: { id: string } } }) {
   }>({});
   const [needToSubmit, setNeedToSubmit] = useState(false);
   const [thankYou, setThankYou] = useState(false);
+  const [questionDeadline, setQuestionDeadline] = useState(
+    addMinutes(new Date(), 3)
+  );
+  const [timeLeft, setTimeLeft] = useState(
+    moment
+      .utc(moment(addMinutes(new Date(), 3)).diff(moment(new Date())))
+      .format("HH:mm:ss")
+  );
+    const nextQuestion = (answer: string) => {
+        questionAnswers[currentQuestion] = answer;
+        setTimeLeft(
+            moment
+                .utc(
+                    moment(addMinutes(new Date(), 3)).diff(moment(new Date()))
+                )
+                .format("HH:mm:ss")
+        );
+        setQuestionDeadline(addMinutes(new Date(), 3));
+        if (currentQuestion === (data?.questions?.length || 0) - 1) {
+            setNeedToSubmit(true);
+        } else {
+            setCurrentQuestion(currentQuestion + 1);
+        }
+    };
+  useEffect(() => {
+    const timer = setInterval(() => {
+        if(moment(questionDeadline).diff(moment(new Date())) < 0) {
+            nextQuestion("DNF");
+        }
+      setTimeLeft(
+        moment
+          .utc(moment(questionDeadline).diff(moment(new Date())))
+          .format("HH:mm:ss")
+      );
+    }, 1000);
+    return () => {
+      clearTimeout(timer);
+    };
+  });
+
   if (!needToSubmit) {
     return (
-      <Card title={data?.questions[currentQuestion].text}>
-        <Form
-          key={`form-${currentQuestion}`}
-          onFinish={(values) => {
-            questionAnswers[currentQuestion] = values.value;
-            if (currentQuestion == (data?.questions?.length || 0) - 1) {
-              setNeedToSubmit(true);
-            } else {
-              setCurrentQuestion(currentQuestion + 1);
-            }
-          }}
-        >
-          <Form.Item name="value">
-            <Input />
-          </Form.Item>
-          <Form.Item>
-            <Button type="primary" htmlType="submit">
-              Submit
-            </Button>
-          </Form.Item>
-        </Form>
-      </Card>
+      <>
+        <Card title={"Quiz Progress"}>
+          <Steps current={currentQuestion}>
+            {data?.questions.map((q, i) => (
+              <Steps.Step
+                title={q.text}
+                subTitle={currentQuestion === i && `Left ${timeLeft}`}
+              />
+            ))}
+            <Steps.Step title="Submission" />
+          </Steps>
+        </Card>
+        <Card title={data?.questions[currentQuestion].text}>
+          <Form
+            key={`form-${currentQuestion}`}
+            onFinish={(values) => {
+                nextQuestion(values.value);
+            }}
+          >
+            <Form.Item name="value">
+              <Input />
+            </Form.Item>
+            <Form.Item>
+              <Button type="primary" htmlType="submit">
+                Submit
+              </Button>
+            </Form.Item>
+          </Form>
+        </Card>
+      </>
     );
   }
   if (!thankYou) {
     return (
+        <>
+        <Card style={{textAlign: "center"}}>
+        <h1>Test Complete!</h1>
       <Button
         onClick={() => {
           s.submitQuiz({
@@ -125,12 +182,15 @@ function QuizTaker(props: { match: { params: { id: string } } }) {
       >
         Submit Answers
       </Button>
+        </Card>
+      </>
+
     );
   }
-  return <div>Thank You!</div>;
+    return <Card style={{textAlign: "center"}}><h1>Thank You!</h1></Card>;
 }
 
-function QuizCreator() {
+function QuizCreator(props: { router: Router }) {
   const [
     quizList,
     setQuiz,
@@ -142,22 +202,41 @@ function QuizCreator() {
   }, []);
   return (
     <div>
-      QuizList
-      <List
-        dataSource={quizList?.quizes || []}
-        renderItem={(item: protos.quizservice.ListQuizesResponse.IEntry) => (
-          <List.Item
-            actions={[
-              <Link to={`/admin/editQuiz/${item.id}`} key="edit-Quiz">
-                {" "}
-                <Button>Edit Quiz</Button>
-              </Link>,
-            ]}
-          >
-            <List.Item.Meta title={item.name} />
-          </List.Item>
-        )}
-      ></List>
+      <Card title="Create a new Quiz">
+        <Form
+          onFinish={(values) => {
+            s.adminCreateQuiz({ name: values.name }).then((res) => {
+              props.router.push(`/admin/editQuiz/${res.id}`);
+            });
+          }}
+        >
+          <Form.Item label={"Quiz Name"} name="name">
+            <Input />
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit">
+              Add New Quiz
+            </Button>
+          </Form.Item>
+        </Form>
+      </Card>
+      <Card title="Edit existing quiz">
+        <List
+          dataSource={quizList?.quizes || []}
+          renderItem={(item: protos.quizservice.ListQuizesResponse.IEntry) => (
+            <List.Item
+              actions={[
+                <Link to={`/admin/editQuiz/${item.id}`} key="edit-Quiz">
+                  {" "}
+                  <Button>Edit Quiz</Button>
+                </Link>,
+              ]}
+            >
+              <List.Item.Meta title={item.name} />
+            </List.Item>
+          )}
+        />
+      </Card>
     </div>
   );
 }
@@ -174,38 +253,42 @@ function EditQuiz(props: { match: { params: { id: string } } }) {
   }, [id]);
   return (
     <div>
-      <Form
-        onFinish={(values) => {
-          s.adminAddQuestionToQuiz({
-            quizId: id,
-            text: values.text,
-          }).then((res) => {
-            if (res.result) {
-              setData({
-                ...data,
-                questions: (data?.questions || []).concat([res.result]) || [],
-              });
-            }
-          });
-        }}
-      >
-        <Form.Item label={"Question Text"} name={"text"}>
-          <Input />
-        </Form.Item>
-        <Form.Item>
-          <Button type="primary" htmlType="submit">
-            Add Question
-          </Button>
-        </Form.Item>
-      </Form>
-      <List
-        dataSource={data?.questions || []}
-        renderItem={(item: protos.quizservice.IQuestion) => (
-          <List.Item>
-            <List.Item.Meta title={item.text} />
-          </List.Item>
-        )}
-      />
+      <Card title="Add new question">
+        <Form
+          onFinish={(values) => {
+            s.adminAddQuestionToQuiz({
+              quizId: id,
+              text: values.text,
+            }).then((res) => {
+              if (res.result) {
+                setData({
+                  ...data,
+                  questions: (data?.questions || []).concat([res.result]) || [],
+                });
+              }
+            });
+          }}
+        >
+          <Form.Item label={"Question Text"} name={"text"}>
+            <Input />
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit">
+              Add Question
+            </Button>
+          </Form.Item>
+        </Form>
+      </Card>
+      <Card title="Current Questions">
+        <List
+          dataSource={data?.questions || []}
+          renderItem={(item: protos.quizservice.IQuestion) => (
+            <List.Item>
+              <List.Item.Meta title={item.text} />
+            </List.Item>
+          )}
+        />
+      </Card>
     </div>
   );
 }
@@ -215,10 +298,14 @@ const BrowserRouter = createBrowserRouter({
     <Route path="/" Component={App}>
       <Route Component={() => <QuizList />} />
       <Route path={"takeQuiz/:id"} Component={QuizTaker} />
-      <Route path={"admin"} Component={QuizCreator}></Route>
+      <Route path={"admin"} Component={QuizCreator} />
       <Route path={"admin/editQuiz/:id"} Component={EditQuiz} />
     </Route>
   ),
 });
 
 export default BrowserRouter;
+
+function addMinutes(date: Date, minutes: number) {
+  return new Date(date.getTime() + minutes * 60000);
+}

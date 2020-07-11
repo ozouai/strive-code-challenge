@@ -1,13 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"github.com/ozouai/strive-code-challenge/models"
 	"github.com/ozouai/strive-code-challenge/quizapipb"
+	"github.com/ozouai/strive-code-challenge/web"
 	"net/http"
+	"os"
+	"time"
 )
 
 type App struct {
@@ -63,11 +67,20 @@ func (m *App) ListQuizes(ctx context.Context, req *quizapipb.ListQuizesRequest) 
 	return res, nil
 }
 
+func envOrDefault(key string, defaultString string) string {
+	d := os.Getenv(key)
+	if d == "" {
+		return defaultString
+	}
+	return d
+}
+
 func main() {
-	dsn := &mysql.Config{Addr: "127.0.0.1",
-		User:                 "root",
-		Passwd:               "password",
-		DBName:               "quiz",
+	port := envOrDefault("PORT", "8000")
+	dsn := &mysql.Config{Net: envOrDefault("MYSQL_NET", "tcp"), Addr: envOrDefault("MYSQL_ADDR", "127.0.0.1"),
+		User:                 envOrDefault("MYSQL_USER", "root"),
+		Passwd:               envOrDefault("MYSQL_PASSWORD", "password"),
+		DBName:               envOrDefault("MYSQL_DB", "quiz"),
 		AllowNativePasswords: true,
 		Params: map[string]string{
 			"charset":   "utf8",
@@ -88,11 +101,17 @@ func main() {
 	db.Model(&models.QuizQuestionEntry{}).AddForeignKey("quiz_question_template_id", "quiz_question_templates(id)", "NO ACTION", "NO ACTION")
 	db.Model(&models.QuizQuestionEntry{}).AddForeignKey("quiz_entry_id", "quiz_entries(id)", "NO ACTION", "NO ACTION")
 	app := &App{DB: db}
-	quiz := app.CreateQuizTemplate("Test")
-	app.CreateQuizQuestionTemplate(quiz, "Test Q")
-
 	server := quizapipb.NewQuizServiceServer(app, nil)
-	err = http.ListenAndServe("127.0.0.1:8000", server)
+	serveMux := http.NewServeMux()
+	fileServer := http.FileServer(web.AssetFS())
+	serveMux.Handle("/twirp/", server)
+	serveMux.Handle("/static/", fileServer)
+	serveMux.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
+		http.ServeContent(writer, request, "index.html", time.Now(), bytes.NewReader(web.MustAsset("build/index.html")))
+	})
+
+
+	err = http.ListenAndServe(":"+port, serveMux)
 	if err != nil {
 		panic(err)
 	}
