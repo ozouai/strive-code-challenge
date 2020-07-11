@@ -105,12 +105,9 @@ func main() {
 	serveMux := http.NewServeMux()
 	fileServer := http.FileServer(web.AssetFS())
 	serveMux.Handle("/twirp/", server)
+	serveMux.Handle("/static/", fileServer)
 	serveMux.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
-		if request.URL.Path == "/" {
-			http.ServeContent(writer, request, "index.html", time.Now(), bytes.NewReader(web.MustAsset("build/index.html")))
-			return
-		}
-		fileServer.ServeHTTP(writer, request)
+		http.ServeContent(writer, request, "index.html", time.Now(), bytes.NewReader(web.MustAsset("build/index.html")))
 	})
 
 
