@@ -15,5 +15,3 @@ steps:
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
-images:
-  - gcr.io/omar-zouai/strive-code-challenge
