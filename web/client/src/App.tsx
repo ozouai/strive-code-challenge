@@ -7,6 +7,7 @@ import Link from "found/Link";
 import Route from "found/Route";
 import createBrowserRouter from "found/createBrowserRouter";
 import makeRouteConfig from "found/makeRouteConfig";
+import moment from "moment";
 
 const s = protos.quizservice.QuizService.create(
   (method, requestData, callback) => {
@@ -80,13 +81,23 @@ function QuizTaker(props: { match: { params: { id: string } } }) {
   }>({});
   const [needToSubmit, setNeedToSubmit] = useState(false);
   const [thankYou, setThankYou] = useState(false);
+  const [questionDeadline, setQuestionDeadline] = useState(addMinutes(new Date(), 3));
+  const [timeLeft, setTimeLeft] = useState(moment.utc(moment(addMinutes(new Date(), 3)).diff(moment(new Date()))).format("HH:mm:ss"));
+  useEffect(()=>{
+      const timer = setInterval(()=>{
+          setTimeLeft(moment.utc(moment(questionDeadline).diff(moment(new Date()))).format("HH:mm:ss"))
+      }, 1000);
+      return ()=>{
+          clearTimeout(timer);
+      }
+  })
   if (!needToSubmit) {
     return (
         <>
         <Card title={"Quiz Progress"}>
         <Steps current={currentQuestion}>
-            {data?.questions.map((q)=>(
-                <Steps.Step title={q.text} />
+            {data?.questions.map((q, i)=>(
+                <Steps.Step title={q.text} subTitle={currentQuestion === i && `Left ${timeLeft}`} />
             ))}
             <Steps.Step title="Submission" />
         </Steps>
@@ -96,6 +107,8 @@ function QuizTaker(props: { match: { params: { id: string } } }) {
           key={`form-${currentQuestion}`}
           onFinish={(values) => {
             questionAnswers[currentQuestion] = values.value;
+            setTimeLeft(moment.utc(moment(addMinutes(new Date(), 3)).diff(moment(new Date()))).format("HH:mm:ss"));
+            setQuestionDeadline(addMinutes(new Date(), 3));
             if (currentQuestion === (data?.questions?.length || 0) - 1) {
               setNeedToSubmit(true);
             } else {
@@ -233,3 +246,7 @@ const BrowserRouter = createBrowserRouter({
 });
 
 export default BrowserRouter;
+
+function addMinutes(date: Date, minutes: number) {
+    return new Date(date.getTime() + minutes*60000);
+}
