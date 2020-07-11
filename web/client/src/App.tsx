@@ -187,7 +187,7 @@ function QuizTaker(props: { match: { params: { id: string } } }) {
 
     );
   }
-  return <div>Thank You!</div>;
+    return <Card style={{textAlign: "center"}}><h1>Thank You!</h1></Card>;
 }
 
 function QuizCreator(props: { router: Router }) {
