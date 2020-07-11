@@ -88,9 +88,6 @@ func main() {
 	db.Model(&models.QuizQuestionEntry{}).AddForeignKey("quiz_question_template_id", "quiz_question_templates(id)", "NO ACTION", "NO ACTION")
 	db.Model(&models.QuizQuestionEntry{}).AddForeignKey("quiz_entry_id", "quiz_entries(id)", "NO ACTION", "NO ACTION")
 	app := &App{DB: db}
-	quiz := app.CreateQuizTemplate("Test")
-	app.CreateQuizQuestionTemplate(quiz, "Test Q")
-
 	server := quizapipb.NewQuizServiceServer(app, nil)
 	err = http.ListenAndServe("127.0.0.1:8000", server)
 	if err != nil {
