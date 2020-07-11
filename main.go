@@ -8,6 +8,7 @@ import (
 	"github.com/ozouai/strive-code-challenge/models"
 	"github.com/ozouai/strive-code-challenge/quizapipb"
 	"net/http"
+	"os"
 )
 
 type App struct {
@@ -63,11 +64,20 @@ func (m *App) ListQuizes(ctx context.Context, req *quizapipb.ListQuizesRequest) 
 	return res, nil
 }
 
+func envOrDefault(key string, defaultString string) string {
+	d := os.Getenv(key)
+	if d == "" {
+		return defaultString
+	}
+	return d
+}
+
 func main() {
-	dsn := &mysql.Config{Addr: "127.0.0.1",
-		User:                 "root",
-		Passwd:               "password",
-		DBName:               "quiz",
+
+	dsn := &mysql.Config{Addr: envOrDefault("MYSQL_HOST", "127.0.0.1"),
+		User:                 envOrDefault("MYSQL_USER", "root"),
+		Passwd:               envOrDefault("MYSQL_PASSWORD", "password"),
+		DBName:               envOrDefault("MYSQL_DB", "quiz"),
 		AllowNativePasswords: true,
 		Params: map[string]string{
 			"charset":   "utf8",
